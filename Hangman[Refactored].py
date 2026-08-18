@@ -1,86 +1,91 @@
 import string
 
-user_word = input("Enter a word you'd like to play with: ")
-secret_word = list(user_word.lower())
-hangman_word = list(len(user_word) * '_')
-guesses = 0
+
+def get_secret_word():
+    """Ask for one playable word and return it in lowercase."""
+    while True:
+        secret_word = input("Enter a word you'd like to play with: ").strip().lower()
+        if secret_word and all(letter in string.ascii_lowercase for letter in secret_word):
+            return secret_word
+        print("Please enter one word using only A-Z letters.")
 
 
-def changes_reset():
-    changes = 0
+def print_library(library):
+    """Print the available letters in two rows."""
+    for index, letter in enumerate(library, start=1):
+        line_end = "\n" if index % 13 == 0 else " "
+        print(letter, end=line_end)
 
 
-limit = int(len(user_word))
+def get_user_guess(library):
+    """Return one available A-Z letter in lowercase."""
+    while True:
+        user_guess = input("Enter a letter you'd like to guess: ").strip().lower()
 
-
-def game_over_check():
-    if guesses == limit:
-        print("You lose! Game Over!")
-        game_over = True
-    elif secret_word == hangman_word:
-        print("You win! Good Job!")
-        game_over = True
-    else:
-        game_over = False
-    return game_over
-
-
-library = list(string.ascii_uppercase)
-
-
-def print_library():
-    for i, item in enumerate(library):
-        if (i + 1) % 13 == 0:
-            print(item)
+        if len(user_guess) != 1 or user_guess not in string.ascii_lowercase:
+            print("Please enter exactly one A-Z letter.")
+        elif user_guess.upper() not in library:
+            print("You already guessed that letter. Try another one.")
         else:
-            print(item, end=' ')
+            return user_guess
 
 
-def user_guess_check():
-    user_guess = input("Enter a letter you'd like to guess: ").lower()
-    alpha_check = user_guess.isalpha()
-    length_check = len(user_guess)
-    while user_guess.upper() not in library or alpha_check is False or length_check != 1:
-        user_guess = input("Enter a letter you'd like to guess "
-                           "(no multi-chars, repeats or non-alpha's allowed): ").lower()
-        alpha_check = user_guess.isalpha()
-        length_check = len(user_guess)
-    return user_guess
+def mark_letter_used(library, user_guess):
+    """Replace a guessed letter with an underscore in the letter library."""
+    index = library.index(user_guess.upper())
+    library[index] = "_"
 
 
-def library_alteration(user_guess):
-    for index, letter in enumerate(library):
-        if user_guess.upper() == library[index]:
-            library.remove(user_guess.upper())
-            library.insert(index, "_")
+def reveal_letter(secret_word, hangman_word, user_guess):
+    """Reveal every match and return how many matches were found."""
+    matches = 0
+    for index, letter in enumerate(secret_word):
+        if letter == user_guess:
+            hangman_word[index] = user_guess
+            matches += 1
+    return matches
 
 
-def scan_through_hangman_word(user_guess, changes):
-    for index2, letter2 in enumerate(secret_word):
-        secret_word_letter = letter2
-        if secret_word_letter == user_guess:
-            hangman_word[index2] = user_guess
-            changes += 1
-            continue
-    return hangman_word, changes
+def get_game_result(secret_word, hangman_word, wrong_guesses, limit):
+    """Return 'win', 'lose', or None while the game is still running."""
+    if hangman_word == list(secret_word):
+        return "win"
+    if wrong_guesses >= limit:
+        return "lose"
+    return None
 
 
-def print_hangman_word_after_guess():
-    return print("".join(hangman_word))
+def main():
+    secret_word = get_secret_word()
+    hangman_word = ["_"] * len(secret_word)
+    library = list(string.ascii_uppercase)
+    wrong_guesses = 0
+    limit = len(secret_word)
+
+    print("".join(hangman_word))
+
+    while True:
+        print_library(library)
+        user_guess = get_user_guess(library)
+        mark_letter_used(library, user_guess)
+
+        matches = reveal_letter(secret_word, hangman_word, user_guess)
+        print("".join(hangman_word))
+
+        if matches == 0:
+            wrong_guesses += 1
+            print(f"Wrong guess! {limit - wrong_guesses} wrong guesses remaining.")
+
+        game_result = get_game_result(
+            secret_word, hangman_word, wrong_guesses, limit
+        )
+        if game_result == "win":
+            print("You win! Good job!")
+            break
+        if game_result == "lose":
+            print(f"You lose! The word was '{secret_word}'.")
+            break
 
 
-def guess_check(changes, guesses):
-    if changes == 0:
-        print("You guessed wrong! Try again!")
-        guesses += 1
-    return guesses
-
-
-while game_over_check() is not True:
-    changes_reset()
-    print_library()
-    user_guess_interim = user_guess_check()
-    library_alteration(user_guess_interim)
-    word_n_changes = list(scan_through_hangman_word(user_guess_interim, 0))
-    print_hangman_word_after_guess()
-    guess_check(word_n_changes[1], 0)
+if __name__ == "__main__":
+    main()
